@@ -42,6 +42,16 @@ import littlerootImgPath from './img/littleroot.png';
     new Float32Array(texCoordsBuffer.getMappedRange()).set(texCoordsData);
     texCoordsBuffer.unmap();
 
+    //Create an index buffer
+    const quadIndexData: Uint16Array = getQuadIndices();
+    const indexBuffer = device.createBuffer({
+        size: Uint16Array.BYTES_PER_ELEMENT * quadIndexData.length,
+        usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+        mappedAtCreation: true
+    })
+    new Uint16Array(indexBuffer.getMappedRange()).set(quadIndexData);
+    indexBuffer.unmap();
+
     //create shader module along with vertex and fragment state
     const shaderModule = device.createShaderModule({code: shaderSource});
     const vertexState: GPUVertexState = {
@@ -156,10 +166,11 @@ import littlerootImgPath from './img/littleroot.png';
     renderPassEncoder.setPipeline(pipeline);
 
     //Bind everything and draw
+    renderPassEncoder.setIndexBuffer(indexBuffer,"uint16");
     renderPassEncoder.setVertexBuffer(0,positionBuffer);
     renderPassEncoder.setVertexBuffer(1,texCoordsBuffer);
     renderPassEncoder.setBindGroup(0,bindGroup);
-    renderPassEncoder.draw(6);
+    renderPassEncoder.drawIndexed(6);
    
     renderPassEncoder.end();
 
@@ -168,15 +179,19 @@ import littlerootImgPath from './img/littleroot.png';
 })();
 
 
+function getQuadIndices(): Uint16Array {
+    return new Uint16Array([
+        0,1,2, //triangle 1
+        3,2,0, //triangle 2
+    ]);
+}
+
 function getQuadPosCoords(): Float32Array {
     return new Float32Array([
         -0.5,-0.5, //bottom left
          0.5,-0.5, //bottom right
          0.5, 0.5, //top right
-
         -0.5, 0.5, //top left
-         0.5, 0.5, //top right
-        -0.5,-0.5, //bottom left
     ]);
 }
 
@@ -185,10 +200,7 @@ function getQuadTexCoords(): Float32Array {
         0.0,1.0, //bottom left
         1.0,1.0, //bottom right
         1.0,0.0, //top right
-
         0.0,0.0, //top left
-        1.0,0.0, //top right
-        0.0,1.0, //bottom left
     ]);
 }
 
