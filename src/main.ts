@@ -1,6 +1,6 @@
 import shaderSource from 'bundle-text:./shader.wgsl'
 import littlerootImgPath from './img/littleroot.png';
-import { glMatrix, mat4 } from 'gl-matrix';
+import { glMatrix, mat4, vec3 } from 'gl-matrix';
 
 //Main method;
 (async () => {
@@ -55,12 +55,13 @@ import { glMatrix, mat4 } from 'gl-matrix';
 
     //Create a uniform buffer
     const projectionMatrix = getOrthoProjectionMatrix();
+    const projectViewMatrix = mat4.multiply(mat4.create(),projectionMatrix,getLookAtMatrix());
     const projectionMatrixBuffer = device.createBuffer({
         size: Float32Array.BYTES_PER_ELEMENT * 16,
         usage: GPUBufferUsage.UNIFORM,
         mappedAtCreation: true
     });
-    new Float32Array(projectionMatrixBuffer.getMappedRange()).set(projectionMatrix);
+    new Float32Array(projectionMatrixBuffer.getMappedRange()).set(projectViewMatrix);
     projectionMatrixBuffer.unmap();
 
     //create shader module along with vertex and fragment state
@@ -253,4 +254,8 @@ function asyncLoadImageFromUrl(url: string): Promise<ImageBitmap> {
 
 function getOrthoProjectionMatrix(): mat4 {
     return mat4.ortho(mat4.create(),-427,427,-240,240,-1,1);
+}
+
+function getLookAtMatrix(): mat4 {
+    return mat4.lookAt(mat4.create(),new Float32Array([0,0,1]),new Float32Array([0,0,0]),new Float32Array([0,1,0]));
 }
