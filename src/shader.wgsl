@@ -3,10 +3,13 @@ struct VertexOutput {
     @location(0) texCoords: vec2f
 }
 
+
+@group(1) @binding(0) var<uniform> projectionViewMatrix: mat4x4f;
+
 @vertex
 fn vertexMain(@location(0) position: vec2f, @location(1) texCoords: vec2f) -> VertexOutput {
     var out: VertexOutput;
-    out.position = vec4f(position,0.0,1.0);
+    out.position = projectionViewMatrix* vec4f(position,0.0,1.0);
     out.texCoords = texCoords;
     return out;
 }

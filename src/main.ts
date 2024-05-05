@@ -1,5 +1,6 @@
 import shaderSource from 'bundle-text:./shader.wgsl'
 import littlerootImgPath from './img/littleroot.png';
+import { glMatrix, mat4 } from 'gl-matrix';
 
 //Main method;
 (async () => {
@@ -51,6 +52,16 @@ import littlerootImgPath from './img/littleroot.png';
     })
     new Uint16Array(indexBuffer.getMappedRange()).set(quadIndexData);
     indexBuffer.unmap();
+
+    //Create a uniform buffer
+    const projectionMatrix = getOrthoProjectionMatrix();
+    const projectionMatrixBuffer = device.createBuffer({
+        size: Float32Array.BYTES_PER_ELEMENT * 16,
+        usage: GPUBufferUsage.UNIFORM,
+        mappedAtCreation: true
+    });
+    new Float32Array(projectionMatrixBuffer.getMappedRange()).set(projectionMatrix);
+    projectionMatrixBuffer.unmap();
 
     //create shader module along with vertex and fragment state
     const shaderModule = device.createShaderModule({code: shaderSource});
@@ -136,9 +147,35 @@ import littlerootImgPath from './img/littleroot.png';
         ]
     });
 
+    //Create uniform bind group layout
+    const uniformBindGroupLayout = device.createBindGroupLayout({
+        entries: [
+            {
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {
+                    type: 'uniform'
+                }
+            }
+        ]
+    });
+
+    //Create uniform bind group
+    const uniformBindGroup = device.createBindGroup({
+        layout: uniformBindGroupLayout,
+        entries: [
+            {
+                binding: 0,
+                resource: {
+                    buffer: projectionMatrixBuffer
+                }
+            }
+        ]
+    })
+
     //Create Pipeline layout
     const pipelineLayout: GPUPipelineLayout = device.createPipelineLayout({
-        bindGroupLayouts: [bindGroupLayout]
+        bindGroupLayouts: [bindGroupLayout,uniformBindGroupLayout]
     });
 
     //Create the pipeline
@@ -170,6 +207,7 @@ import littlerootImgPath from './img/littleroot.png';
     renderPassEncoder.setVertexBuffer(0,positionBuffer);
     renderPassEncoder.setVertexBuffer(1,texCoordsBuffer);
     renderPassEncoder.setBindGroup(0,bindGroup);
+    renderPassEncoder.setBindGroup(1,uniformBindGroup);
     renderPassEncoder.drawIndexed(6);
    
     renderPassEncoder.end();
@@ -188,10 +226,10 @@ function getQuadIndices(): Uint16Array {
 
 function getQuadPosCoords(): Float32Array {
     return new Float32Array([
-        -0.5,-0.5, //bottom left
-         0.5,-0.5, //bottom right
-         0.5, 0.5, //top right
-        -0.5, 0.5, //top left
+        -100, -100, //bottom left
+        200, -100, //bottom right
+        200, 200, //top right
+        -100, 200, //top left
     ]);
 }
 
@@ -211,4 +249,8 @@ function asyncLoadImageFromUrl(url: string): Promise<ImageBitmap> {
         image.onerror = () => reject('unable to load image');
         image.src = url;
     });
+}
+
+function getOrthoProjectionMatrix(): mat4 {
+    return mat4.ortho(mat4.create(),-427,427,-240,240,-1,1);
 }
